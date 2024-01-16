@@ -8,8 +8,9 @@ import (
 )
 
 type Bot struct {
-	BotAPI *tgbotapi.BotAPI
-	DB     *database.MongoDB
+	BotAPI      *tgbotapi.BotAPI
+	DB          *database.MongoDB
+	UpdatesChan chan<- tgbotapi.UpdatesChannel // Добавим поле UpdatesChan
 	// Добавьте другие поля по необходимости
 }
 
@@ -24,24 +25,40 @@ func NewBot(token, mongoURI string) (*Bot, error) {
 		return nil, err
 	}
 
+	updates := make(chan tgbotapi.Update)
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+
+	go func() {
+		updates, err := botAPI.GetUpdatesChan(u)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for update := range updates {
+			// Используйте канал UpdatesChan для отправки обновлений
+			UpdatesChan <- update
+		}
+	}()
+
 	return &Bot{
-		BotAPI: botAPI,
-		DB:     db,
+		BotAPI:      botAPI,
+		DB:          db,
+		UpdatesChan: updates,
 	}, nil
 }
 
 func (b *Bot) Start() {
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates, err := b.BotAPI.GetUpdatesChan(u)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for update := range updates {
+	for update := range b.UpdatesChan {
 		if update.Message != nil {
 			handlers.HandleMessage(b, update.Message)
 		}
+	}
+}
+
+func (b *Bot) SendMessage(chatID int64, text string) {
+	msg := tgbotapi.NewMessage(chatID, text)
+	_, err := b.BotAPI.Send(msg)
+	if err != nil {
+		log.Println("Error sending message:", err)
 	}
 }

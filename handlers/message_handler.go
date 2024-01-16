@@ -7,21 +7,25 @@ import (
 	"time"
 )
 
+// HandleMessage метод для обработки входящего сообщения.
 func HandleMessage(b *bot.Bot, message *tgbotapi.Message) {
 	// Обработка входящего сообщения
 	// Пример: регистрация нового пользователя
 	if message.Text == "/register" {
-		user, err := registerUser(b, message)
+		user, err := RegisterUser(b, message)
 		if err != nil {
 			log.Println("Error registering user:", err)
 			return
 		}
-		bot.SendMessage(b.BotAPI, message.Chat.ID, "Registration successful. Welcome, "+user.FirstName+"!")
+		b.SendMessage(b.BotAPI, message.Chat.ID, "Registration successful. Welcome, "+user.FirstName+"!")
+	} else if message.Text == "/add_admin" {
+		// Обработка команды добавления админа
+		b.AdminPanel.HandleAddAdmin(message)
 	}
 	// Добавьте другие обработчики по необходимости
 }
 
-func registerUser(b *bot.Bot, message *tgbotapi.Message) (*database.User, error) {
+func RegisterUser(b *bot.Bot, message *tgbotapi.Message) (*database.User, error) {
 	// Логика регистрации пользователя в базе данных
 	// Пример: сохранение пользователя в MongoDB
 	user := &database.User{

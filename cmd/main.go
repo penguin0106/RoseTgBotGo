@@ -21,6 +21,8 @@ func main() {
 		return
 	}
 
+	defer myBot.DB.Close() // Закрытие соединения с базой данных при завершении работы
+
 	// Запуск бота
 	myBot.Start()
 }

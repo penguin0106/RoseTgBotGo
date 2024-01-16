@@ -4,75 +4,88 @@ import (
 	"RoseTgBotGo/bot"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"log"
+	"strconv"
 )
 
 // AdminPanel структура для представления админ панели.
 type AdminPanel struct {
-	Bot *bot.Bot
+	Bot        *bot.Bot
+	AdminsList []int64
 }
 
+// NewAdminPanel создает новый экземпляр AdminPanel.
 func NewAdminPanel(b *bot.Bot) *AdminPanel {
 	return &AdminPanel{
-		Bot: b,
+		Bot:        b,
+		AdminsList: make([]int64, 0),
 	}
 }
 
-// HandleCommand обработчик команд от администратора.
-func (ap *AdminPanel) HandleCommand(command string, message *tgbotapi.Message) {
-	switch command {
-	case "/add_admin":
-		ap.handleAddAdmin(message)
-	case "/send_broadcast":
-		ap.handleSendBroadcast(message)
-	default:
-		// Добавьте обработку других команд администратора по необходимости
-	}
-}
-
-func (ap *AdminPanel) handleAddAdmin(message *tgbotapi.Message) {
-	// Реализуйте логику добавления администратора
-	// Пример: запрос ID пользователя и добавление в список админов
-	adminID := ap.askForAdminID(message)
-	if adminID != 0 {
-		// Добавление в список админов
-		ap.Bot.AdminPanel.AddAdmin(adminID)
-		ap.Bot.SendMessage(ap.BotAPI, message.Chat.ID, "Admin added successfully.")
-	} else {
-		ap.Bot.SendMessage(ap.BotAPI, message.Chat.ID, "Invalid user ID. Admin not added.")
-	}
-}
-
-func (ap *AdminPanel) handleSendBroadcast(message *tgbotapi.Message) {
-	// Реализуйте логику отправки рассылки
-	// Пример: запрос текста рассылки и отправка всем пользователям
-	text := ap.askForBroadcastText(message)
-	if text != "" {
-		users, err := ap.Bot.DB.GetAllUsers()
-		if err != nil {
-			log.Println("Error getting users for broadcast:", err)
+// AddAdmin добавляет администратора в список.
+func (ap *AdminPanel) AddAdmin(adminID int64) {
+	// Проверка, чтобы избежать добавления одного и того же админа несколько раз
+	for _, existingAdminID := range ap.AdminsList {
+		if existingAdminID == adminID {
 			return
 		}
+	}
 
-		for _, user := range users {
-			ap.Bot.SendMessage(ap.BotAPI, user.ID, text)
-		}
+	// Добавление админа в список
+	ap.AdminsList = append(ap.AdminsList, adminID)
+	log.Printf("Admin added: %d\n", adminID)
+}
 
-		ap.Bot.SendMessage(ap.BotAPI, message.Chat.ID, "Broadcast sent successfully.")
+// HandleAddAdmin обрабатывает команду добавления админа.
+func (ap *AdminPanel) HandleAddAdmin(message *tgbotapi.Message) {
+	// Запрос ID пользователя для добавления в админы
+	adminID := ap.AskForAdminID(message)
+	if adminID != 0 {
+		// Добавление в список админов
+		ap.AddAdmin(adminID)
+		// Используйте SendMessage из вашего пакета bot
+		ap.Bot.SendMessage(message.Chat.ID, "Admin added successfully.")
 	} else {
-		ap.Bot.SendMessage(ap.BotAPI, message.Chat.ID, "Broadcast text cannot be empty.")
+		// Используйте SendMessage из вашего пакета bot
+		ap.Bot.SendMessage(message.Chat.ID, "Admin not added.")
 	}
 }
 
-func (ap *AdminPanel) askForAdminID(message *tgbotapi.Message) int64 {
-	// Реализуйте логику запроса ID пользователя для добавления в администраторы
-	// Верните 0, если ID неверен
-	// Пример: отобразите клавиатуру для ввода ID и верните его значение
-	return 0
-}
+// AskForAdminID запрашивает ID пользователя для добавления в админы.
+func (ap *AdminPanel) AskForAdminID(message *tgbotapi.Message) int64 {
+	// Отправить сообщение с вспомогательной клавиатурой
+	msg := tgbotapi.NewMessage(message.Chat.ID, "Введите ID пользователя для добавления в админы:")
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("Отмена"),
+		),
+	)
+	msg.ReplyMarkup = keyboard
 
-func (ap *AdminPanel) askForBroadcastText(message *tgbotapi.Message) string {
-	// Реализуйте логику запроса текста рассылки
-	// Верните пустую строку, если текст неверен
-	// Пример: отобразите клавиатуру для ввода текста и верните его значение
-	return ""
+	// Отправить сообщение
+	sentMsg, err := ap.Bot.BotAPI.Send(msg)
+	if err != nil {
+		log.Println("Error sending message:", err)
+		return 0
+	}
+
+	// Ожидать ответа от пользователя
+	update := <-ap.UpdatesChan
+	if update.Message.Text == "Отмена" {
+		// Обработать отмену (не добавлять пользователя в админы)
+		return 0
+	}
+
+	// Парсинг ID пользователя из ответа
+	adminID, err := strconv.ParseInt(update.Message.Text, 10, 64)
+	if err != nil {
+		// Обработать ошибку парсинга
+		log.Println("Error parsing admin ID:", err)
+		return 0
+	}
+
+	// Добавление админа в список
+	ap.AddAdmin(adminID)
+	// Используйте SendMessage из вашего пакета bot
+	ap.Bot.SendMessage(sentMsg.Chat.ID, "Admin added successfully.")
+	return adminID
 }
