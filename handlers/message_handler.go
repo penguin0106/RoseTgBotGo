@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/your_username/your_project_name/bot"
+	"github.com/penguin0106/RoseTgBotGo/bot"
 	"log"
 	"time"
 )

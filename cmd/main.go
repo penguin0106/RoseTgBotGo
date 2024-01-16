@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/your_username/your_project_name/bot"
-	"github.com/your_username/your_project_name/config"
+	"github.com/penguin0106/RoseTgBotGo/bot"
+	"github.com/penguin0106/RoseTgBotGo/config"
 	"log"
 )
 

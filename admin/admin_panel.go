@@ -2,7 +2,7 @@ package admin
 
 import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/penguin0106/your_project_name/bot"
+	"github.com/penguin0106/RoseTgBotGo/bot"
 	"log"
 )
 
