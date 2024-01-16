@@ -1,9 +1,9 @@
 package bot
 
 import (
+	"RoseTgBotGo/database"
+	"RoseTgBotGo/handlers"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/penguin0106/RoseTgBotGo/database"
-	"github.com/penguin0106/RoseTgBotGo/handlers"
 	"log"
 )
 
